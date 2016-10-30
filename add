@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.settings')
+
+import argparse
+import json
+import requests
+from server import linedb
+
+parser = argparse.ArgumentParser(description='Add data example.')
+parser.add_argument('text', help='text to add')
+parser.add_argument('--nopub', action='store_true', help='don\'t publish')
+args = parser.parse_args()
+
+newitem = args.text
+
+items = linedb.read()
+prev_id = len(items)
+
+id = linedb.append(newitem)
+
+if not args.nopub:
+	pubitem = {
+		'channel': 'test',
+		'id': str(id),
+		'prev-id': str(prev_id),
+		'http-stream': {
+			'content': newitem + '\n'
+		}
+	}
+
+	postdata = json.dumps({'items': [pubitem]})
+
+	requests.post('http://localhost:5561/publish/', data=postdata)
